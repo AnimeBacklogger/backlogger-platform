@@ -1,0 +1,43 @@
+# This Vagrant script is designed to help bring up a new development VM for any projects I need to start.
+# It will create a debian instance and pre-install some useful applications.
+
+Vagrant.configure("2") do |config|
+    #define the base vm
+    config.vm.box = "elastic/ubuntu-16.04-x86_64"
+    # I have a preference for debian, but then again I also have a preference for easy.
+    #config.vm.box = "debian/jessie64"
+    #Fix because jessie wants to use rsync as VB's default file synce contains incompatible license
+    #config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+
+    # Setup a shared folder for files:
+    config.vm.synced_folder "./sharedFiles", "/vagrantShare"
+
+    config.vm.provider "virtualbox" do |v|
+        v.name = "Backlogger"
+      end
+
+
+      #make it available locally as "192.168.13.37"
+      config.vm.network "private_network", ip: "192.168.13.37"
+      #allow it to access the internet
+      config.vm.network "public_network"
+
+
+      # --- Using ansible --- #
+      # Move across any files needed on the machine
+      config.vm.provision "file", source: "../ansible", destination: "/tmp/ansible"
+      config.vm.provision "shell", inline: "sudo rm -f -r /ansible"
+      config.vm.provision "shell", inline: "sudo mv /tmp/ansible /"
+
+      #Provisioning with ansible (using the guestVM to sort itself out)
+      config.vm.provision :ansible_local do |ansible|
+          ansible.provisioning_path = "/ansible"
+          ansible.playbook = "ansibleBase.yml"
+          ansible.sudo = true
+      end
+
+      config.vm.provision :shell do |sh|
+          sh.inline = "echo provisioning complete"
+      end
+
+    end
